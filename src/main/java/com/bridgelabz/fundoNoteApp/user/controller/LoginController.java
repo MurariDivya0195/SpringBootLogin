@@ -1,11 +1,13 @@
 package com.bridgelabz.fundoNoteApp.user.controller;
 
+import java.util.Optional;
+
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,18 +19,17 @@ import com.bridgelabz.fundoNoteApp.user.model.User;
 import com.bridgelabz.fundoNoteApp.user.service.UserService;
 
 @RestController
-@ComponentScan("com.bl.app.user.service")
+
 public class LoginController {
 
 	@Autowired
-	UserService userService;
+	private UserService userService;
 	@Autowired
 	private JavaMailSender sender;
 	String userEmail;
 
 	@RequestMapping(value = "/login", method = RequestMethod.POST)
 	public String geteUserByLogin(@RequestBody User user) {
-		userEmail = user.getEmail();
 		return userService.login(user);
 	}
 
@@ -36,7 +37,6 @@ public class LoginController {
 	public String sendMail(@RequestBody User user) {
 		MimeMessage message = sender.createMimeMessage();
 		MimeMessageHelper helper = new MimeMessageHelper(message);
-
 		try {
 			helper.setTo(user.getEmail());
 			helper.setText("Greetings :)");
@@ -70,6 +70,45 @@ public class LoginController {
 
 		return "User Deleted successfully....";
 
+	}
+
+	@RequestMapping(value = "/forgot", method = RequestMethod.POST)
+	public String forgotPassword(@RequestBody User user, HttpServletRequest request, HttpServletResponse response) {
+		User userDetails = userService.getUserInfoByEmail(user.getEmail());
+		if (userDetails == null) {
+			return "We didn't find an account for that e-mail address.";
+		} else {
+
+			String token = userService.generateToken(userDetails.getId());
+			response.setHeader("token", token);
+
+			MimeMessage message = sender.createMimeMessage();
+			MimeMessageHelper helper = new MimeMessageHelper(message);
+			String appUrl = request.getScheme() + "://" + request.getServerName();
+			try {
+				helper.setTo(userDetails.getEmail());
+				helper.setText("To reset your password, click the link below:\n" + appUrl + "/reset?token=" + token);
+				helper.setSubject("Password Reset Request");
+			} catch (MessagingException e) {
+				e.printStackTrace();
+				return "Error while sending mail ..";
+			}
+			sender.send(message);
+			return "Mail Sent Success!";
+		}
+	}
+
+	@RequestMapping(value = "/reset", method = RequestMethod.PUT)
+	public String changePassword(HttpServletRequest request, @RequestBody User user) {
+		String token = request.getHeader("token");
+		int id = userService.verifyToken(token);
+		if (id >= 0) {
+			Optional<User> userList = userService.findById(id);
+			userList.get().setPassword(user.getPassword());
+			userService.saveUser(userList.get());
+			return "Changed";
+		} else
+			return "Not changed";
 	}
 
 }

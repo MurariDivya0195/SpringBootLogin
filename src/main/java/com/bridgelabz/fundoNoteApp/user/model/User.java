@@ -20,10 +20,10 @@ public class User {
 //	@Column(name = "password")
 	private String password;
 
-//	@Column(name = "phonenumber")
-	private int phonenumber;
+//	@Column(name = "phoneNumber")
+	private String phonenumber;
 
-//	@Column(name = "activestatus")
+//	@Column(name = "activeStatus")
 	private String status;
 
 //	@Column(name = "image")
@@ -71,11 +71,11 @@ public class User {
 		this.password = password;
 	}
 
-	public int getPhonenumber() {
+	public String getPhonenumber() {
 		return phonenumber;
 	}
 
-	public void setPhonenumber(int phonenumber) {
+	public void setPhonenumber(String phonenumber) {
 		this.phonenumber = phonenumber;
 	}
 

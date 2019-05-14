@@ -32,18 +32,13 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public String login(User user) {
-		String password = securePassword(user);
 
-		List<User> usrlst = userRep.findByIdAndPassword(user.getId(), password);
-		System.out.println("SIZE : " + usrlst.size());
+		List<User> usrlst = userRep.findByIdAndPassword(user.getId(), securePassword(user));
 
 		if (usrlst.size() > 0 && usrlst != null) {
-			System.out.println("Sucessful login");
-
 			return "Welcome " + usrlst.get(0).getName() + "Jwt--->" + generateToken(usrlst.get(0).getId());
 
 		} else {
-			System.out.println("wrong emailid or password");
 			return "wrong emailid or password";
 		}
 	}
@@ -56,12 +51,6 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public User changeUserPassword(User user) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public User update(String token, User user) {
 		int varifiedUserId = verifyToken(token);
 
@@ -69,7 +58,7 @@ public class UserServiceImpl implements UserService {
 		User presentUser = maybeUser.map(existingUser -> {
 			existingUser.setEmail(user.getEmail() != null ? user.getEmail() : maybeUser.get().getEmail());
 			existingUser.setPhonenumber(
-					user.getPhonenumber() != 0 ? user.getPhonenumber() : maybeUser.get().getPhonenumber());
+					user.getPhonenumber() != null ? user.getPhonenumber() : maybeUser.get().getPhonenumber());
 			existingUser.setName(user.getName() != null ? user.getName() : maybeUser.get().getName());
 			existingUser.setPassword(user.getPassword() != null ? securePassword(user) : maybeUser.get().getPassword());
 			return existingUser;
@@ -124,7 +113,7 @@ public class UserServiceImpl implements UserService {
 		catch (NoSuchAlgorithmException e) {
 			System.out.println("Exception thrown" + " for incorrect algorithm: " + e);
 
-			return null;
+			return "Exception";
 		}
 
 	}
@@ -132,14 +121,9 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public User saveUser(User user) {
 
-		User givenUser = new User();
-		givenUser.setEmail(user.getEmail());
-		givenUser.setName(user.getName());
-		givenUser.setPhonenumber(user.getPhonenumber());
-		givenUser.setPassword(securePassword(user));
-		givenUser.setId(user.getId());
-		userRep.save(givenUser);
-		return givenUser;
+		user.setPassword(securePassword(user));
+		userRep.save(user);
+		return user;
 	}
 
 	// Token Generation
@@ -167,5 +151,17 @@ public class UserServiceImpl implements UserService {
 		System.out.println("Issuer: " + claims.getIssuer());
 		System.out.println("Expiration: " + claims.getExpiration());
 		return Integer.parseInt(claims.getSubject());
+	}
+
+	@Override
+	public User getUserInfoByEmail(String email) {
+		return userRep.findByEmail(email);
+
+	}
+
+	@Override
+	public Optional<User> findById(int id) {
+		return userRep.findById(id);
+
 	}
 }
