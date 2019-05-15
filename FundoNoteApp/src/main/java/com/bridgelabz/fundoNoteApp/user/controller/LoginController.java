@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.bridgelabz.fundoNoteApp.user.model.User;
 import com.bridgelabz.fundoNoteApp.user.service.UserService;
+import com.bridgelabz.fundoNoteApp.util.TokenClass;
 
 @RestController
 
@@ -27,6 +28,9 @@ public class LoginController {
 	@Autowired
 	private JavaMailSender sender;
 	String userEmail;
+
+	@Autowired
+	private TokenClass tokennum;
 
 	@RequestMapping(value = "/login", method = RequestMethod.POST)
 	public String geteUserByLogin(@RequestBody User user) {
@@ -79,7 +83,7 @@ public class LoginController {
 			return "We didn't find an account for that e-mail address.";
 		} else {
 
-			String token = userService.generateToken(userDetails.getId());
+			String token = tokennum.jwtToken(user.getId());
 			response.setHeader("token", token);
 
 			MimeMessage message = sender.createMimeMessage();
@@ -101,7 +105,7 @@ public class LoginController {
 	@RequestMapping(value = "/reset", method = RequestMethod.PUT)
 	public String changePassword(HttpServletRequest request, @RequestBody User user) {
 		String token = request.getHeader("token");
-		int id = userService.verifyToken(token);
+		int id = tokennum.parseJWT(token);
 		if (id >= 0) {
 			Optional<User> userList = userService.findById(id);
 			userList.get().setPassword(user.getPassword());
@@ -110,14 +114,12 @@ public class LoginController {
 		} else
 			return "Not changed";
 	}
-	
-	
-	
-	//CODE FOR ACTIVATION OF EMAIL
-	@RequestMapping(value="/mail", method=RequestMethod.POST)
+
+	// CODE FOR ACTIVATION OF EMAIL
+	@RequestMapping(value = "/mail", method = RequestMethod.POST)
 	public String mailForActivation(HttpServletRequest request) {
 		String token = request.getHeader("token");
-		int userId = userService.verifyToken(token);
+		int userId = tokennum.parseJWT(token);
 		Optional<User> list = userService.findById(userId);
 		if (list == null) {
 			return "We didn't find an account for that e-mail address.";
@@ -129,15 +131,13 @@ public class LoginController {
 			return userService.sendmail(subject, userdetails, appUrl);
 		}
 
-		
 	}
-	
-	@RequestMapping(value="/active", method=RequestMethod.PUT)
-	public String activeStatus(HttpServletRequest request)
-	{
+
+	@RequestMapping(value = "/active", method = RequestMethod.PUT)
+	public String activeStatus(HttpServletRequest request) {
 		String token = request.getHeader("token");
 
-		int id = userService.verifyToken(token);
+		int id = tokennum.parseJWT(token);
 		if (id >= 0) {
 			Optional<User> userList = userService.findById(id);
 			userList.get().setStatus(1);
@@ -146,6 +146,5 @@ public class LoginController {
 		} else
 			return "Not changed";
 	}
-
 
 }

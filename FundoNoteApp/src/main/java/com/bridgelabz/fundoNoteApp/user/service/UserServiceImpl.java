@@ -1,11 +1,8 @@
 package com.bridgelabz.fundoNoteApp.user.service;
 
 import java.math.BigInteger;
-import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,11 +17,7 @@ import org.springframework.stereotype.Service;
 
 import com.bridgelabz.fundoNoteApp.user.model.User;
 import com.bridgelabz.fundoNoteApp.user.repository.UserRepository;
-
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.impl.crypto.MacProvider;
+import com.bridgelabz.fundoNoteApp.util.TokenClass;
 
 @Service
 @Transactional
@@ -36,14 +29,16 @@ public class UserServiceImpl implements UserService {
 	@Autowired
 	private JavaMailSender sender;
 
+	@Autowired
+	private TokenClass tokennum;
+
 	@Override
 	public String login(User user) {
 
 		List<User> usrlst = userRep.findByIdAndPassword(user.getId(), securePassword(user));
 
 		if (usrlst.size() > 0 && usrlst != null) {
-			return "Welcome " + usrlst.get(0).getName() + "Jwt--->" + generateToken(usrlst.get(0).getId());
-
+			return "Welcome " + usrlst.get(0).getName() + "Jwt--->" + tokennum.jwtToken(usrlst.get(0).getId());
 		} else {
 			return "wrong emailid or password";
 		}
@@ -58,7 +53,7 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public User update(String token, User user) {
-		int varifiedUserId = verifyToken(token);
+		int varifiedUserId = tokennum.parseJWT(token);
 
 		Optional<User> maybeUser = userRep.findById(varifiedUserId);
 		User presentUser = maybeUser.map(existingUser -> {
@@ -75,7 +70,7 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public boolean delete(String token) {
-		int varifiedUserId = verifyToken(token);
+		int varifiedUserId = tokennum.parseJWT(token);
 
 		// return userRep.deleteById(varifiedUserId);
 		Optional<User> maybeUser = userRep.findById(varifiedUserId);
@@ -133,31 +128,33 @@ public class UserServiceImpl implements UserService {
 	}
 
 	// Token Generation
-	@Override
-	public String generateToken(int id) {
-
-		Date now = new Date();
-		Date exp = new Date(System.currentTimeMillis() + (1000 * 30)); // 30 seconds
-
-		String token = Jwts.builder().setSubject(String.valueOf(id)).setIssuedAt(now).setNotBefore(now)
-				.setExpiration(exp).signWith(SignatureAlgorithm.HS256, base64SecretBytes).compact();
-
-		return token;
-	}
-
-	private static final Key secret = MacProvider.generateKey(SignatureAlgorithm.HS256);
-	private static final byte[] secretBytes = secret.getEncoded();
-	private static final String base64SecretBytes = Base64.getEncoder().encodeToString(secretBytes);
-
-	public int verifyToken(String token) {
-		Claims claims = Jwts.parser().setSigningKey(base64SecretBytes).parseClaimsJws(token).getBody();
-		System.out.println("----------------------------");
-		System.out.println("ID: " + claims.getId());
-		System.out.println("Subject: " + claims.getSubject());
-		System.out.println("Issuer: " + claims.getIssuer());
-		System.out.println("Expiration: " + claims.getExpiration());
-		return Integer.parseInt(claims.getSubject());
-	}
+	/*
+	 * @Override public String generateToken(int id) {
+	 * 
+	 * Date now = new Date(); Date exp = new Date(System.currentTimeMillis() + (1000
+	 * * 3000)); // 30 seconds
+	 * 
+	 * String token =
+	 * Jwts.builder().setSubject(String.valueOf(id)).setIssuedAt(now).setNotBefore(
+	 * now) .setExpiration(exp).signWith(SignatureAlgorithm.HS256,
+	 * base64SecretBytes).compact();
+	 * 
+	 * return token; }
+	 */
+	/*
+	 * private static final Key secret =
+	 * MacProvider.generateKey(SignatureAlgorithm.HS256); private static final
+	 * byte[] secretBytes = secret.getEncoded(); private static final String
+	 * base64SecretBytes = Base64.getEncoder().encodeToString(secretBytes);
+	 * 
+	 * public int verifyToken(String token) { Claims claims =
+	 * Jwts.parser().setSigningKey(base64SecretBytes).parseClaimsJws(token).getBody(
+	 * ); System.out.println("----------------------------");
+	 * System.out.println("ID: " + claims.getId()); System.out.println("Subject: " +
+	 * claims.getSubject()); System.out.println("Issuer: " + claims.getIssuer());
+	 * System.out.println("Expiration: " + claims.getExpiration()); return
+	 * Integer.parseInt(claims.getSubject()); }
+	 */
 
 	@Override
 	public User getUserInfoByEmail(String email) {
@@ -175,7 +172,7 @@ public class UserServiceImpl implements UserService {
 	public String sendmail(String subject, User userdetails, String appUrl) {
 		MimeMessage message = sender.createMimeMessage();
 		MimeMessageHelper helper = new MimeMessageHelper(message);
-		
+
 		try {
 
 			helper.setTo(userdetails.getEmail());
@@ -188,5 +185,5 @@ public class UserServiceImpl implements UserService {
 		sender.send(message);
 		return "Mail Sent Success!";
 	}
-	
+
 }

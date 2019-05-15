@@ -9,9 +9,9 @@ public interface UserService {
 
 	public User userReg(User user);
 
-	public String generateToken(int id);
+	//public String generateToken(int id);
 
-	public int verifyToken(String secretKey);
+	//public int verifyToken(String secretKey);
 
 	public String securePassword(User user);
 
